@@ -1396,9 +1396,9 @@ void print_chat_info_gw (void *extra, int success, struct tgl_chat *C) {
   for (i = 0; i < C->user_list_size; i++) {
     mprintf (ev, "\t\t");
     print_user_name (ev, TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].user_id)));
-    mpush_color (ev, COLOR_RED);  //TODO REMOVE
-    mprintf (ev, " [%d]", C->user_list[i].user_id); //TODO REMOVE
-    mpop_color ();  //TODO REMOVE
+    mpush_color (ev, COLOR_RED);
+    mprintf (ev, " [%d]", C->user_list[i].user_id);
+    mpop_color (ev);
     mprintf (ev, " invited by ");
     print_user_name (ev, TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].inviter_id)));
     mprintf (ev, " at ");
