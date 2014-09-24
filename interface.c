@@ -1396,6 +1396,9 @@ void print_chat_info_gw (void *extra, int success, struct tgl_chat *C) {
   for (i = 0; i < C->user_list_size; i++) {
     mprintf (ev, "\t\t");
     print_user_name (ev, TGL_MK_USER (C->user_list[i].user_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].user_id)));
+    mpush_color (ev, COLOR_RED);  //TODO REMOVE
+    mprintf (ev, " [%d]", C->user_list[i].user_id); //TODO REMOVE
+    mpop_color ();  //TODO REMOVE
     mprintf (ev, " invited by ");
     print_user_name (ev, TGL_MK_USER (C->user_list[i].inviter_id), tgl_peer_get (TGL_MK_USER (C->user_list[i].inviter_id)));
     mprintf (ev, " at ");
@@ -1466,7 +1469,7 @@ void print_dialog_list_gw (void *extra, int success, int size, tgl_peer_id_t pee
     switch (tgl_get_peer_type (peers[i])) {
     case TGL_PEER_USER:
       UC = tgl_peer_get (peers[i]);
-      mprintf (ev, "User ");
+      mprintf (ev, "{user_status} User ");
       print_user_name (ev, peers[i], UC);
       mprintf (ev, ": %d unread\n", unread_count[i]);
       break;
@@ -1546,7 +1549,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
     mpush_color (ev, COLOR_YELLOW);
     switch (tgl_get_peer_type (to_id)) {
     case TGL_PEER_USER:
-      mprintf (ev, "User ");
+      mprintf (ev, "{user_status} User ");
       print_user_name (ev, to_id, tgl_peer_get (to_id));    
       break;
     case TGL_PEER_CHAT:
@@ -1602,7 +1605,7 @@ void type_notification_upd (struct tgl_user *U) {
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "User ");
+  mprintf (ev, "{user_status} User ");
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is typing\n");
   mpop_color (ev);
@@ -1614,7 +1617,7 @@ void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C) {
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "User ");
+  mprintf (ev, "{user_status} User ");
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is typing in chat ");
   print_chat_name (ev, C->id, (void *)C);
