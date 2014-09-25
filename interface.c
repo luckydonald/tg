@@ -2445,9 +2445,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
       print_date (ev, M->date);
       mpop_color (ev);
-      if (M->media.type != tgl_message_media_none {
-          print_media (ev, &M->media);
-      }
+      if (M->media.type != tgl_message_media_none) { // ADDED
+          print_media (ev, &M->media); // ADDED
+      } // ADDED
       mprintf (ev, " {print_message} ");
       print_user_name (ev, M->from_id, tgl_peer_get (M->from_id));
       mpush_color (ev, COLOR_BLUE);
