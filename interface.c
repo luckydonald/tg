@@ -461,12 +461,12 @@ char *get_default_prompt (void) {
       l += snprintf (buf + l, 999 - l, "%lld%%Down", 100 * tgl_state.cur_downloaded_bytes / tgl_state.cur_downloading_bytes);
     }
     l += snprintf (buf + l, 999 - l, "]" COLOR_NORMAL);
-    if (tgl_state.unread_messages) {
-        l += snprintf (buf + l, 999 - l, "\n");
-    }
+    if (tgl_state.unread_messages) { // ADDED
+        l += snprintf (buf + l, 999 - l, "\n"); // ADDED
+    } // ADDED
     return buf;
   } 
-  l += snprintf (buf + l, 999 - l, "%s", default_prompt);
+  //l += snprintf (buf + l, 999 - l, "%s", default_prompt); // ADDED
   return buf;
 }
 
@@ -2418,7 +2418,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   last_from_id = M->from_id;
   last_to_id = M->to_id;
 
-  print_start (); //CHANGED
+  //print_start (); //NOT CHANGED
   if (tgl_get_peer_type (M->to_id) == TGL_PEER_USER) {
     if (M->out) {
       mpush_color (ev, COLOR_GREEN);
@@ -2427,9 +2427,9 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       }
       print_date (ev, M->date);
       mpop_color (ev);
-      if(M->media.type != tgl_message_media_none) {
-        print_media (ev, &M->media);
-      }
+      if(M->media.type != tgl_message_media_none) { // ADDED
+        print_media (ev, &M->media); // ADDED
+      } // ADDED
       mprintf (ev, " ");
       print_user_name (ev, M->to_id, tgl_peer_get (M->to_id));
       mpush_color (ev, COLOR_GREEN);
@@ -2537,7 +2537,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
   mpop_color (ev);
   assert (!color_stack_pos);
   mprintf (ev, "{end_print_message}\n"); //CHANGED
-  print_end(); //CHANGED
+  //print_end(); //NOT CHANGED
 }
 
 void play_sound (void) {
