@@ -94,7 +94,7 @@ struct query *tglq_query_get (long long id) {
 
 static int alarm_query (struct query *q) {
   assert (q);
-  vlogprintf (E_DEBUG, "Alarm query %lld\n", q->msg_id);
+  vlogprintf (E_DEBUG - 1, "Alarm query %lld\n", q->msg_id);
   //q->ev.timeout = get_double_time () + QUERY_TIMEOUT;
   //insert_event_timer (&q->ev);
   
@@ -118,7 +118,9 @@ static int alarm_query (struct query *q) {
     tglmp_encrypt_send_message (q->session->c, packet_buffer, packet_ptr - packet_buffer, q->flags & QUERY_FORCE_SEND);
   } else {
     q->flags &= ~QUERY_ACK_RECEIVED;
-    queries_tree = tree_delete_query (queries_tree, q);
+    if (tree_lookup_query (queries_tree, q)) {
+      queries_tree = tree_delete_query (queries_tree, q);
+    }
     q->msg_id = tglmp_encrypt_send_message (q->session->c, q->data, q->data_len, (q->flags & QUERY_FORCE_SEND) | 1);
     queries_tree = tree_insert_query (queries_tree, q, lrand48 ());
     q->session_id = q->session->session_id;
@@ -219,14 +221,35 @@ void tglq_query_error (long long id) {
       event_del (q->ev);
     }
     queries_tree = tree_delete_query (queries_tree, q);
-    if (q->methods && q->methods->on_error) {
-      q->methods->on_error (q, error_code, error_len, error);
+    int res = 0;
+    if (q->methods && q->methods->on_error && error_code != 500) {
+      res = q->methods->on_error (q, error_code, error_len, error);
     } else {
-      vlogprintf ( E_WARNING, "error for query #%lld: #%d :%.*s\n", id, error_code, error_len, error);
+      if (error_code == 420 || error_code == 500) {
+        int wait;
+        if (error_code == 420) {
+          if (strncmp (error, "FLOOD_WAIT_", 11)) {
+            vlogprintf (E_ERROR, "error = '%s'\n", error);
+            wait = 10;
+          } else {
+            wait = atoll (error + 11);
+          }
+        } else {
+          wait = 10;
+        }
+        q->flags &= ~QUERY_ACK_RECEIVED;
+        static struct timeval ptimeout;
+        ptimeout.tv_sec = wait;
+        event_add (q->ev, &ptimeout);
+        q->session_id = 0;
+        res = 1;
+      }
     }
-    tfree (q->data, q->data_len * 4);
-    event_free (q->ev);
-    tfree (q, sizeof (*q));
+    if (res <= 0) {
+      tfree (q->data, q->data_len * 4);
+      event_free (q->ev);
+      tfree (q, sizeof (*q));
+    }
   }
   tgl_state.active_queries --;
 }
@@ -314,7 +337,7 @@ static void out_random (int n) {
 
 int allow_send_linux_version;
 void tgl_do_insert_header (void) {
-  out_int (CODE_invoke_with_layer16);  
+  out_int (CODE_invoke_with_layer17);  
   out_int (CODE_init_connection);
   out_int (TG_APP_ID);
   if (allow_send_linux_version) {
@@ -914,7 +937,17 @@ static int msg_send_on_answer (struct query *q UU) {
 }
 
 static int msg_send_on_error (struct query *q, int error_code, int error_len, char *error) {
-  vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  //vlogprintf (E_WARNING, "error for query #%lld: #%d :%.*s\n", q->msg_id, error_code, error_len, error);
+  if (error_code == 420) {
+    assert (!strncmp (error, "FLOOD_WAIT_", 11));
+    int wait = atoll (error + 11);
+    q->flags &= ~QUERY_ACK_RECEIVED;
+    static struct timeval ptimeout;
+    ptimeout.tv_sec = wait;
+    event_add (q->ev, &ptimeout);
+    q->session_id = 0;
+    return 1;
+  }
   long long x = *(long long *)q->extra;
   tfree (q->extra, 8);
   struct tgl_message *M = tgl_message_get (x);
@@ -957,7 +990,13 @@ void tgl_do_send_encr_msg_action (struct tgl_message *M, void (*callback)(void *
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
-  out_int (CODE_decrypted_message_service);
+  if (P->encr_chat.layer <= 16) {
+    out_int (CODE_decrypted_message_service_l16);
+  } else {
+    out_int (CODE_decrypted_message_service);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+  }
   out_long (M->id);
   static int buf[4];
   tglt_secure_random (buf, 16);
@@ -1001,7 +1040,14 @@ void tgl_do_send_encr_msg (struct tgl_message *M, void (*callback)(void *callbac
   out_long (P->encr_chat.access_hash);
   out_long (M->id);
   encr_start ();
-  out_int (CODE_decrypted_message);
+  if (P->encr_chat.layer <= 16) {
+    out_int (CODE_decrypted_message_l16);
+  } else {
+    out_int (CODE_decrypted_message);
+    out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+    out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id));
+    out_int (0);
+  }
   out_long (M->id);
   static int buf[4];
   tglt_secure_random (buf, 16);
@@ -1141,6 +1187,7 @@ void tgl_do_messages_mark_read (tgl_peer_id_t id, int max_id, int offset, void (
   out_peer_id (id);
   out_int (max_id);
   out_int (offset);
+  out_int (CODE_bool_true);
   int *t = talloc (12);
   t[0] = tgl_get_peer_type (id);
   t[1] = tgl_get_peer_id (id);
@@ -1738,7 +1785,14 @@ static void send_part (struct send_file *f, void *callback, void *callback_extra
       tglt_secure_random (&r, 8);
       out_long (r);
       encr_start ();
-      out_int (CODE_decrypted_message);
+      if (P->encr_chat.layer <= 16) {
+        out_int (CODE_decrypted_message_l16);
+      } else {
+        out_int (CODE_decrypted_message);
+        out_int (2 * P->encr_chat.in_seq_no + (P->encr_chat.admin_id != tgl_state.our_id));
+        out_int (2 * P->encr_chat.out_seq_no + (P->encr_chat.admin_id == tgl_state.our_id) + 2);
+        out_int (0);
+      }
       out_long (r);
       out_random (15 + 4 * (lrand48 () % 3));
       out_string ("");
@@ -2361,6 +2415,10 @@ static int download_on_answer (struct query *q) {
   struct download *D = q->extra;
   if (D->fd == -1) {
     D->fd = open (D->name, O_CREAT | O_WRONLY, 0640);
+    if (D->fd < 0) {
+      vlogprintf (E_ERROR, "Can not open for writing: %m\n");
+      assert (D->fd >= 0);
+    }
   }
   fetch_int (); // mtime
   int len = prefetch_strlen ();
@@ -2906,6 +2964,9 @@ static int send_encr_accept_on_answer (struct query *q UU) {
     print_end ();
   }*/
 
+  if (E->state == sc_ok) {
+    tgl_do_send_encr_chat_layer (E);
+  }
   if (q->callback) {
     ((void (*)(void *, int, struct tgl_secret_chat *))q->callback) (q->callback_extra, E->state == sc_ok, E);
   }

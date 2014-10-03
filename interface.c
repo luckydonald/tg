@@ -300,17 +300,17 @@ tgl_peer_id_t cur_token_user (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
 
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
+  if (l >= 8 && !memcmp (s, "user#id", 7)) {
+    s += 7;    
+    l -= 7;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
     else { return TGL_PEER_NOT_FOUND; }
   }
-  if (l >= 8 && !memcmp (s, "user#id", 7)) {
-    s += 7;    
-    l -= 7;
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
@@ -335,18 +335,17 @@ tgl_peer_id_t cur_token_chat (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
   
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
+  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
+    s += 7;    
+    l -= 7;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
     else { return TGL_PEER_NOT_FOUND; }
   }
-  
-  if (l >= 8 && !memcmp (s, "chat#id", 7)) {
-    s += 7;    
-    l -= 7;
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
@@ -386,22 +385,6 @@ tgl_peer_id_t cur_token_peer (void) {
   char c = cur_token[cur_token_len];
   cur_token[cur_token_len] = 0;
   
-  if (l >= 6 && !memcmp (s, "user#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
-  if (l >= 6 && !memcmp (s, "chat#", 5)) {
-    s += 5;    
-    l -= 5;
-    int r = atoi (s);
-    cur_token[cur_token_len] = c;
-    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
-    else { return TGL_PEER_NOT_FOUND; }
-  }
   if (l >= 8 && !memcmp (s, "user#id", 7)) {
     s += 7;    
     l -= 7;
@@ -413,6 +396,22 @@ tgl_peer_id_t cur_token_peer (void) {
   if (l >= 8 && !memcmp (s, "chat#id", 7)) {
     s += 7;    
     l -= 7;
+    int r = atoi (s);
+    cur_token[cur_token_len] = c;
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
+    else { return TGL_PEER_NOT_FOUND; }
+  }
+  if (l >= 6 && !memcmp (s, "user#", 5)) {
+    s += 5;    
+    l -= 5;
+    int r = atoi (s);
+    cur_token[cur_token_len] = c;
+    if (r >= 0) { return tgl_set_peer_id (TGL_PEER_USER, r); }
+    else { return TGL_PEER_NOT_FOUND; }
+  }
+  if (l >= 6 && !memcmp (s, "chat#", 5)) {
+    s += 5;    
+    l -= 5;
     int r = atoi (s);
     cur_token[cur_token_len] = c;
     if (r >= 0) { return tgl_set_peer_id (TGL_PEER_CHAT, r); }
@@ -432,6 +431,15 @@ tgl_peer_id_t cur_token_peer (void) {
 static tgl_peer_t *mk_peer (tgl_peer_id_t id) {
   if (tgl_get_peer_type (id) == NOT_FOUND) { return 0; }
   tgl_peer_t *P = tgl_peer_get (id);
+  if (!P) {
+    if (tgl_get_peer_type (id) == TGL_PEER_USER) {
+      tgl_insert_empty_user (tgl_get_peer_id (id));
+    }
+    if (tgl_get_peer_type (id) == TGL_PEER_CHAT) {
+      tgl_insert_empty_chat (tgl_get_peer_id (id));
+    }
+    P = tgl_peer_get (id);
+  }
   return P;
 }
 
@@ -1032,7 +1040,7 @@ struct command commands[] = {
   {"chat_del_user", {ca_chat, ca_user, ca_none}, do_chat_del_user, "chat_del_user <chat> <user>\tDeletes user from chat"},
   {"status_online", {ca_none}, do_status_online, "status_online\tSets status as online"},
   {"status_offline", {ca_none}, do_status_offline, "status_offline\tSets status as offline"},
-  {"quit", {ca_none}, do_quit, "quit\tQuits immideatly"},
+  {"quit", {ca_none}, do_quit, "quit\tQuits immediately"},
   {"safe_quit", {ca_none}, do_safe_quit, "safe_quit\tWaits for all queries to end, then quits"},
   {"set", {ca_string, ca_number, ca_none}, do_set, "set <param> <value>\tSets value of param. Currently available: log_level, debug_verbosity, alarm, msg_num"},
   {"chat_with_peer", {ca_peer, ca_none}, do_chat_with_peer, "chat_with_peer <peer>\tInterface option. All input will be treated as messages to this peer. Type /quit to end this mode"},
@@ -1599,26 +1607,68 @@ void mark_read_upd (int num, struct tgl_message *list[]) {
   }
 }
 
-void type_notification_upd (struct tgl_user *U) {
+void print_typing (struct in_ev *ev, enum tgl_typing_status status) {
+  switch (status) {
+  case tgl_typing_none:
+    mprintf (ev, "doing nothing");
+    break;
+  case tgl_typing_typing:
+    mprintf (ev, "typing");
+    break;
+  case tgl_typing_cancel:
+    mprintf (ev, "deleting typed message");
+    break;
+  case tgl_typing_record_video:
+    mprintf (ev, "recording video");
+    break;
+  case tgl_typing_upload_video:
+    mprintf (ev, "uploading video");
+    break;
+  case tgl_typing_record_audio:
+    mprintf (ev, "recording audio");
+    break;
+  case tgl_typing_upload_audio:
+    mprintf (ev, "uploading audio");
+    break;
+  case tgl_typing_upload_photo:
+    mprintf (ev, "uploading photo");
+    break;
+  case tgl_typing_upload_document:
+    mprintf (ev, "uploading document");
+    break;
+  case tgl_typing_geo:
+    mprintf (ev, "choosing location");
+    break;
+  case tgl_typing_choose_contact:
+    mprintf (ev, "choosing contact");
+    break;
+  }
+}
+
+void type_notification_upd (struct tgl_user *U, enum tgl_typing_status status) {
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "{user_status} User ");
   print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, " is typing\n");
+  mprintf (ev, " is ");
+  print_typing (ev, status);
+  mprintf (ev, "\n");
   mpop_color (ev);
   mprint_end (ev);
 }
 
-void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C) {
+void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C, enum tgl_typing_status status) {
   if (log_level < 2 || (disable_output && !notify_ev)) { return; }
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "{user_status} User ");
   print_user_name (ev, U->id, (void *)U);
-  mprintf (ev, " is typing in chat ");
+  mprintf (ev, " is ");
+  print_typing (ev, status);
+  mprintf (ev, " in chat ");
   print_chat_name (ev, C->id, (void *)C);
   mprintf (ev, "\n");
   mpop_color (ev);
@@ -1920,7 +1970,10 @@ void interpreter_ex (char *line UU, void *ex) {
     if (op == ca_none) { 
       next_token ();
       if (cur_token_end_str) {
-        fun (args_num, args, ex);
+        int z;
+        for (z = 0; z < count; z ++) {
+          fun (args_num, args, ex);
+        }
       }
       break;
     }
@@ -1932,7 +1985,10 @@ void interpreter_ex (char *line UU, void *ex) {
       } else {
         args[args_num].flags = 1;
         args[args_num ++].str = strndup (cur_token, cur_token_len);
-        fun (args_num, args, ex);
+        int z;
+        for (z = 0; z < count; z ++) {
+          fun (args_num, args, ex);
+        }
         break;
       }
     }
@@ -1941,7 +1997,10 @@ void interpreter_ex (char *line UU, void *ex) {
     next_token ();
 
     if (period && cur_token_end_str) {
-      fun (args_num, args, ex);
+      int z;
+      for (z = 0; z < count; z ++) {
+        fun (args_num, args, ex);
+      }
       break;
     }
 
@@ -2389,6 +2448,10 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     break;
   case tgl_message_action_notify_layer:
     mprintf (ev, " updated layer to %d\n", M->action.layer);
+    break;
+  case tgl_message_action_typing:
+    mprintf (ev, " is ");
+    print_typing (ev, M->action.typing);
     break;
   default:
     assert (0);
