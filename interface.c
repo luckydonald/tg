@@ -2320,7 +2320,7 @@ void print_date_full (struct in_ev *ev, long t) {
 
 void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   assert (M);
-  print_start ();//CHANGED
+  //print_start ();// NOT CHANGED / ADDED
   mpush_color (ev, COLOR_GREY);
   
   mpush_color (ev, COLOR_MAGENTA);
@@ -2394,7 +2394,7 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     assert (0);
   }
   mpop_color (ev);
-  print_end (); //CHANGED
+  //print_end (); // NOT CHANGED / ADDED
 }
 
 tgl_peer_id_t last_from_id;
