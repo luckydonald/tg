@@ -485,8 +485,10 @@ char *get_default_prompt (void) {
       ok = 1;
       l += snprintf (buf + l, 999 - l, "%lld%%Down", 100 * tgl_state.cur_downloaded_bytes / tgl_state.cur_downloading_bytes);
     }
-    l += snprintf (buf + l, 999 - l, "]" COLOR_NORMAL);
-    l += snprintf (buf + l, 999 - l, "\n"); // ADDED
+    l += snprintf (buf + l, 999 - l, "]" COLOR_NORMAL); // ADDED
+    if (tgl_state.unread_messages) { // ADDED
+      l += snprintf (buf + l, 999 - l, "\n"); // ADDED
+    } string// ADDED
     return buf;
   } 
   l += snprintf (buf + l, 999 - l, "%s", default_prompt); // NOT ADDED
