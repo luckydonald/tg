@@ -1582,10 +1582,11 @@ void print_read_list (int num, struct tgl_message *list[]) {
 
     assert (c1 + c2 > 0);
     mpush_color (ev, COLOR_YELLOW);
+    print_date (ev, M->date); //ADDED
     switch (tgl_get_peer_type (to_id)) {
     case TGL_PEER_USER:
-      mprintf (ev, "{user_status} User ");
-      print_user_name (ev, to_id, tgl_peer_get (to_id));    
+      mprintf (ev, "{user_status} User "); //ADDED / CHANGED
+      print_user_name (ev, to_id, tgl_peer_get (to_id));
       break;
     case TGL_PEER_CHAT:
       mprintf (ev, "Chat ");
@@ -1678,7 +1679,8 @@ void type_notification_upd (struct tgl_user *U, enum tgl_typing_status status) {
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "{user_status} User ");
+  print_date (ev, M->date); //ADDED
+  mprintf (ev, "{user_status} User "); //ADDED/CHANGED
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is ");
   print_typing (ev, status);
@@ -1692,7 +1694,8 @@ void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C, enum
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  mprintf (ev, "{user_status} User ");
+  print_date (ev, M->date); //ADDED
+  mprintf (ev, "{user_status} User "); //ADDED/CHANGED
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is ");
   print_typing (ev, status);
