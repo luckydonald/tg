@@ -4,7 +4,7 @@
 START_DATE=`date`
 date1=$(date +"%s")
 # Execute Process
-make
+make && echo -e '\a' || (echo -e '\a'; sleep 1; echo -e '\a')
 date2=$(date +"%s")
 END_DATE=`date`
 
