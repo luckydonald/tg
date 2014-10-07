@@ -2533,7 +2533,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if(M->media.type != tgl_message_media_none) { // ADDED
         print_media (ev, &M->media); // ADDED
       } // ADDED
-      mprintf (ev, " ");
+      mprintf (ev, " {print_message} "); //ADDED / CHANGED
       print_user_name (ev, M->to_id, tgl_peer_get (M->to_id));
       mpush_color (ev, COLOR_GREEN);
       if (M->unread) {
