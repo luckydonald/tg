@@ -1679,7 +1679,7 @@ void type_notification_upd (struct tgl_user *U, enum tgl_typing_status status) {
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  print_date (ev, M->date); //ADDED
+  //print_date (ev, M->date); //ADDED
   mprintf (ev, "{user_status} User "); //ADDED/CHANGED
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is ");
@@ -1694,7 +1694,7 @@ void type_in_chat_notification_upd (struct tgl_user *U, struct tgl_chat *C, enum
   struct in_ev *ev = notify_ev;
   mprint_start (ev);
   mpush_color (ev, COLOR_YELLOW);
-  print_date (ev, M->date); //ADDED
+  //print_date (ev, M->date); //ADDED
   mprintf (ev, "{user_status} User "); //ADDED/CHANGED
   print_user_name (ev, U->id, (void *)U);
   mprintf (ev, " is ");
