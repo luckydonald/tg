@@ -1582,7 +1582,7 @@ void print_read_list (int num, struct tgl_message *list[]) {
 
     assert (c1 + c2 > 0);
     mpush_color (ev, COLOR_YELLOW);
-    print_date (ev, M->date); //ADDED
+    // print_date (ev, M->date); //ADDED
     switch (tgl_get_peer_type (to_id)) {
     case TGL_PEER_USER:
       mprintf (ev, "{user_status} User "); //ADDED / CHANGED
