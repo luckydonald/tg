@@ -922,6 +922,21 @@ void do_set_profile_photo (int arg_num, struct arg args[], struct in_ev *ev) {
   tgl_do_set_profile_photo (args[0].str, 0, 0);
 }
 
+void do_set_profile_name (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  tgl_do_set_profile_name (args[0].str, args[1].str, print_user_gw, ev);
+}
+
+void do_set_username (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 1);
+  tgl_do_set_username (args[0].str, print_user_gw, ev);
+}
+
+void do_contact_search (int arg_num, struct arg args[], struct in_ev *ev) {
+  assert (arg_num == 2);
+  tgl_do_contact_search (args[0].str, args[1].num == NOT_FOUND ? args[1].num : 10, print_user_list_gw, ev);
+}
+
 void do_accept_secret_chat (int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 1);
   tgl_do_accept_encr_chat_request (&args[0].P->encr_chat, 0, 0);
@@ -1039,7 +1054,7 @@ struct command commands[] = {
   {"fwd", {ca_peer, ca_number, ca_none}, do_fwd, "fwd <peer> <msg-id>\tForwards message to peer. Forward to secret chats is forbidden"},
   {"fwd_media", {ca_peer, ca_number, ca_none}, do_fwd_media, "fwd <peer> <msg-id>\tForwards message media to peer. Forward to secret chats is forbidden. Result slightly differs from fwd"},
   {"msg", {ca_peer, ca_string_end, ca_none}, do_msg, "msg <peer> <text>\tSends text message to peer"},
-  {"rename_chat", {ca_peer, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
+  {"rename_chat", {ca_chat, ca_string_end, ca_none}, do_rename_chat, "rename_chat <chat> <new name>\tRenames chat"},
   {"load_photo", {ca_number, ca_none}, do_load_photo, "load_photo <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
   {"load_video", {ca_number, ca_none}, do_load_video, "load_video <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
   {"load_audio", {ca_number, ca_none}, do_load_audio, "load_audio <msg-id>\tDownloads file to downloads dirs. Prints file name after download end"},
@@ -1058,6 +1073,7 @@ struct command commands[] = {
   {"show_license", {ca_none}, do_show_license, "show_license\tPrints contents of GPL license"},
   {"search", {ca_peer | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_number | ca_optional, ca_string_end}, do_search, "search [peer] [limit] [from] [to] [offset] pattern\tSearch for pattern in messages from date from to date to (unixtime) in messages with peer (if peer not present, in all messages)"},
   {"mark_read", {ca_peer, ca_none}, do_mark_read, "mark_read <peer>\tMarks messages with peer as read"},
+  {"contact_search", {ca_string, ca_number | ca_optional, ca_none}, do_contact_search, "contact_search username [limit]\tSearches contacts by username"},
   {"visualize_key", {ca_secret_chat, ca_none}, do_visualize_key, "visualize_key <secret chat>\tPrints visualization of encryption key (first 16 bytes sha1 of it in fact}"},
   {"create_secret_chat", {ca_user, ca_none}, do_create_secret_chat, "create_secret_chat <user>\tStarts creation of secret chat"},
   {"chat_add_user", {ca_chat, ca_user, ca_number | ca_optional, ca_none}, do_chat_add_user, "chat_add_user <chat> <user> [msgs-to-forward]\tAdds user to chat. Sends him last msgs-to-forward message from this chat. Default 100"},
@@ -1073,6 +1089,8 @@ struct command commands[] = {
   {"create_group_chat", {ca_string, ca_user, ca_period, ca_none}, do_create_group_chat, "create_group_chat <name> <user>+\tCreates group chat with users"},
   {"chat_set_photo", {ca_chat, ca_file_name_end, ca_none}, do_chat_set_photo, "chat_set_photo <chat> <filename>\tSets chat photo. Photo will be cropped to square"},
   {"set_profile_photo", {ca_file_name_end, ca_none}, do_set_profile_photo, "set_profile_photo <filename>\tSets profile photo. Photo will be cropped to square"},
+  {"set_profile_name", {ca_string, ca_string, ca_none}, do_set_profile_name, "set_profile_name <first-name> <last-name>\tSets profile name."},
+  {"set_username", {ca_string, ca_none}, do_set_username, "set_username <name>\tSets username."},
   {"accept_secret_chat", {ca_secret_chat, ca_none}, do_accept_secret_chat, "accept_secret_chat <secret chat>\tAccepts secret chat. Only useful with -E option"},
   {"set_ttl", {ca_secret_chat, ca_number,  ca_none}, do_set_ttl, "set_ttl <secret chat>\tSets secret chat ttl. Client itself ignores ttl"},
   {"export_card", {ca_none}, do_export_card, "export_card\tPrints card that can be imported by another user with import_card method"},
@@ -1459,6 +1477,9 @@ void print_user_info_gw (void *extra, int success, struct tgl_user *U) {
   mpush_color (ev, COLOR_YELLOW);
   mprintf (ev, "User ");
   print_user_name (ev, U->id, C);
+  if (U->username) {
+    mprintf (ev, " @%s", U->username);
+  }
   mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
   mprintf (ev, "\treal name: %s %s\n", U->real_first_name, U->real_last_name);
   mprintf (ev, "\tphone: %s\n", U->phone);
@@ -1767,6 +1788,9 @@ void print_peer_updates (struct in_ev *ev, int flags) {
   }
   if (flags & TGL_UPDATE_ACCESS_HASH) {
     mprintf (ev, " access_hash");
+  }
+  if (flags & TGL_UPDATE_USERNAME) {
+    mprintf (ev, " username");
   }
 }
 
