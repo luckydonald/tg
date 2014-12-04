@@ -18,8 +18,8 @@
 */
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
-#include "structures.h"
-#include "tgl-layout.h"
+#include <tgl/tgl-structures.h>
+#include <tgl/tgl-layout.h>
 
 #define COLOR_RED "\033[0;31m"
 #define COLOR_REDB "\033[1;31m"
@@ -45,7 +45,7 @@ void logprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)))
 
 #define vlogprintf(v,...) \
   do { \
-    if (tgl_state.verbosity >= (v)) {\
+    if (TLS->verbosity >= (v)) {\
       logprintf (__VA_ARGS__);\
     }\
   } while (0);\

@@ -23,7 +23,7 @@ Fourth, in peer_name '#' are substitued to '@'. (Not applied to appending of '#%
 
 Clone GitHub Repository
 
-     git clone https://bitbucket.org/luckydonald/tg-for-pytg2.git && cd tg-for-pytg2
+     git clone --recursive https://bitbucket.org/luckydonald/tg-for-pytg2.git && cd tg-for-pytg2
 
 #### Linux and BSDs
 
@@ -32,12 +32,12 @@ If you do not want to use them pass options --disable-libconfig and --disable-li
 
 On Ubuntu/Debian use: 
 
-     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev
+     sudo apt-get install libreadline-dev libconfig-dev libssl-dev lua5.2 liblua5.2-dev libevent-dev make
 
 Then,
 
-     ./configure --disable-liblua
-     make
+
+     ./configure --disable-liblua && make
 
 For other systems see the original [telegram-cli](https://github.com/vysheng/tg)
 
