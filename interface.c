@@ -488,12 +488,12 @@ char *get_default_prompt (void) {
       l += snprintf (buf + l, 999 - l, "%lld%%Down", 100 * TLS->cur_downloaded_bytes / TLS->cur_downloading_bytes);
     }
     l += snprintf (buf + l, 999 - l, "]" COLOR_NORMAL); // ADDED
-    if (tgl_state.unread_messages) { // ADDED
+    if (TLS->unread_messages) { // ADDED
       l += snprintf (buf + l, 999 - l, "\n"); // ADDED
     } // ADDED
     return buf;
   } 
-  l += snprintf (buf + l, 999 - l, "%s", default_prompt); // NOT ADDED
+  l += snprintf (buf + l, 999 - l, "%s", default_prompt);
   return buf;
 }
 
