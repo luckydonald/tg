@@ -1605,8 +1605,8 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
   }
   mpop_color (ev);
   mprint_end (ev);
-void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
 }
+void print_user_status (struct tgl_user_status *S, struct in_ev *ev) {
 
   if (S->online > 0) {
     mprintf (ev, "online");
