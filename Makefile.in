@@ -49,7 +49,7 @@ ${TG_OBJECTS}: ${OBJ}/%.o: ${srcdir}/%.c | create_dirs_and_headers
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
 
 ${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.a
-	${CC} $^ ${LINK_FLAGS} -o $@
+	${CC} $^ ${LINK_FLAGS} -o $@ -lpthread
 
 clean:
 	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
