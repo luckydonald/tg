@@ -77,7 +77,7 @@ echo -e "\n\n\n" && gcc -I. -I. -g -O2  -I/usr/local/include -I/usr/include -I/u
 
 #define SOCKET_ANSWER_MAX_SIZE (1 << 25)
 #define BLOCK_SIZE 256
-#define PREFIX_LENGTH 18
+#define PREFIX_LENGTH 16
 static char socket_answer[SOCKET_ANSWER_MAX_SIZE + 1];
 static int answer_pos = -1;
 static int have_address = 0;
@@ -421,8 +421,8 @@ int socket_send()
 		int start = 0;
 
 		//Send Prefix block
-		static char length_prefix[PREFIX_LENGTH] = ""; //"LENGTH 33554432\n" = 6+space+8+newline = 17 characters, 18 with terminating NULL
-		memset (&length_prefix, 0, PREFIX_LENGTH);
+		static char length_prefix[PREFIX_LENGTH + 1] = ""; //"LENGTH 33554432\n" = 6+space+8+newline = 16 characters, 17 with terminating NULL
+		memset (&length_prefix, 0, PREFIX_LENGTH + 1);
 		sprintf (length_prefix, "LENGTH %08d\n", answer_pos);
 		while(start < PREFIX_LENGTH)
 		{
