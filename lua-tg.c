@@ -95,8 +95,8 @@ extern struct tgl_state *TLS;
 int socked_fd = -1;
 struct sockaddr_in serv_addr;
 int socked_in_use = 0;
-struct rk_sema *edit_list;
-struct rk_sema *edit_socket_status;
+rk_sema_t *edit_list;
+rk_sema_t *edit_socket_status;
 
 #define DEFAULT_PORT 4458
 

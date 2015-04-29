@@ -13,13 +13,13 @@
 #include <semaphore.h>
 #endif
 
-struct rk_sema {
+typedef struct rk_sema {
 #ifdef __APPLE__
 	dispatch_semaphore_t    sem;
 #else
     sem_t                   sem;
 #endif
-};
+} rk_sema_t;
 
 
 static inline void
