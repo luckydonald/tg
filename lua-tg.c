@@ -77,6 +77,7 @@ echo -e "\n\n\n" && gcc -I. -I. -g -O2  -I/usr/local/include -I/usr/include -I/u
 
 #define SOCKET_ANSWER_MAX_SIZE (1 << 25)
 #define BLOCK_SIZE 256
+#define PREFIX_LENGTH 18
 static char socket_answer[SOCKET_ANSWER_MAX_SIZE + 1];
 static int answer_pos = -1;
 static int have_address = 0;
@@ -88,7 +89,7 @@ static int have_address = 0;
 int msg_freshness = FRESHNESS_OLD; // -1: old (binlog), 0: startup (diff), 1: New
 
 extern struct tgl_state *TLS;
-
+extern int safe_quit;
 
 
 //packet size
@@ -336,7 +337,7 @@ void socket_init (char *address_string)
 }
 
 void socket_connect() {
-	while(socked_fd == -1)
+	while(socked_fd == -1 && !safe_quit)
 	{
 		socked_fd = socket(AF_INET, SOCK_STREAM, 0); //lets do UDP Socket and listener_d is the Descriptor
 		if (socked_fd == -1)
@@ -366,9 +367,13 @@ void answer_send()
 	int did_send = 0;
 	do {
 		socket_connect();
+		if (safe_quit) {
+			socket_close();
+			break;
+		}
 		did_send = socket_send();
 		socket_close();
-	} while (did_send != 1);
+	} while (did_send != 1 && !safe_quit);
 	answer_end();
 }
 
@@ -389,6 +394,7 @@ int answer_start() {
 }
 void answer_end() {
 	rk_sema_wait(edit_socket_status);
+	memset(socket_answer, 0, answer_pos); //reset da data.
 	answer_pos = -1;
 	assert(socked_in_use == 1);
 	socked_in_use = 0;
@@ -399,6 +405,8 @@ int recv_all(int sockfd, void *buf, size_t len, int flags)
 ;
 
 
+int get_acknowledge(const char *string);
+
 int socket_send()
 {
 	/**
@@ -406,13 +414,34 @@ int socket_send()
 	 * returns 0, if the client responded 'ERR'
 	 * returns -1, if the client response timed out (10 seconds).
 	 **/
-	int success = 0;
 	if (answer_pos > 0) {
 		printf("Message length: %i\n", answer_pos);
 		printf("Sending response: " COLOR_GREY "%.*s" COLOR_NORMAL "\n", answer_pos, socket_answer);
 		ssize_t sent = 0;
 		int start = 0;
+
+		//Send Prefix block
+		static char length_prefix[PREFIX_LENGTH] = ""; //"LENGTH 33554432\n" = 6+space+8+newline = 17 characters, 18 with terminating NULL
+		memset (&length_prefix, 0, PREFIX_LENGTH);
+		sprintf (length_prefix, "LENGTH %08d\n", answer_pos);
+		while(start < PREFIX_LENGTH)
+		{
+			sent = send(socked_fd, (void *)(length_prefix + start), (size_t) PREFIX_LENGTH - start, 0);
+			if(sent==-1){
+				perror("send");
+				break;
+			}
+			//printf("Send %li of %i, starting %i\n", sent, answer_pos, start);
+			start += sent;
+		}
+		//Get Ack block
+		int ack = get_acknowledge("Header");
+		if (ack <= 0) {
+			return ack;
+		}
+		//Send the actual message
 		size_t size = BLOCK_SIZE;
+		start = 0;
 		if(answer_pos - start < (int)size) // less than a size block.
 		{
 			size = (size_t)(answer_pos - start); //what is left.
@@ -433,34 +462,49 @@ int socket_send()
 			}
 			//printf("starting %i, going %li\n", start, size);
 		}
-		if (start == answer_pos)
-		{
-			puts("Did send.");
-		} else {
-			printf("Didn't send, start (%i) != answer_pos (%i)\n", start, answer_pos);
-		}
-		memset(socket_answer, 0, answer_pos); //reset da data.
-		char response[4] = "   ";
-		memset(response, 0, 4);
-		struct timeval tv;
-		tv.tv_sec = 10;  /* 10 Secs Timeout */
-		tv.tv_usec = 0;  // Not init'ing this can cause strange errors
-		setsockopt(socked_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
-		int read = recv_all(socked_fd, response, 3, 0); //TODO: Error checks
-		if (strncmp(response,"ACK",3) == 0) { //strncmp == 0 means zero difference.
-			puts(COLOR_GREEN "Client acknowledged." COLOR_NORMAL);
-			success = 1;
-		} else if (strncmp(response,"ERR",3) == 0){
-			puts(COLOR_REDB "Client failed." COLOR_NORMAL);
-			success = 0;
-		} else {
-			puts(COLOR_REDB "Client has not acknowledged." COLOR_NORMAL);
-			success = -1;
-		}
-		//printf(COLOR_YELLOW "read: %i\n" COLOR_NORMAL, read);
-		return success;
+		return get_acknowledge("Message");
 	}
 	return 1;
+}
+
+int get_acknowledge(const char *string)
+{
+	/**
+	 * returns 1, if successfully send (or there was nothing to send.) and the client responded with 'ACK'
+	 * returns 0, if the client responded 'ERR'
+	 * returns -1, if the client response timed out (10 seconds), or closed the connection, or recv did fail otherwise.
+	 **/
+	struct timeval tv;
+	tv.tv_sec = 10;  /* 10 Secs Timeout */
+	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+	char response[4] = "   "; //3 Characters + 1 Null-termiantor
+	memset(response, 0, 4);
+	setsockopt(socked_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
+	int read = recv_all(socked_fd, response, 3, 0);
+	if (read < 0) {
+		int err_no = errno;
+		if (err_no == EAGAIN) {
+			printf(COLOR_REDB "Client has not acknowledged %s before the timeout.\n" COLOR_NORMAL, string);
+			return -1;
+		}
+		printf(COLOR_REDB "Failed to receive Client's response for acknowledgeing %s.\n" COLOR_NORMAL, string);
+		errno = err_no;
+		perror("receive");
+		return -1;
+	}else if (read == 0) {
+		printf(COLOR_REDB "Client closed the connection before acknowledgeing %s.\n" COLOR_NORMAL, string);
+		return -1;
+	}
+	if (strncmp(response,"ACK",3) == 0) { //strncmp == 0 means zero difference.
+		printf(COLOR_GREEN "Client acknowledged %s.\n" COLOR_NORMAL, string);
+		return 1;
+	} else if (strncmp(response,"ERR",3) == 0){
+		printf(COLOR_REDB "Client reported error for %s.\n" COLOR_NORMAL, string);
+		return 0;
+	} else {
+		printf(COLOR_REDB "Client has not acknowledged %s.\n" COLOR_NORMAL, string);
+		return -1;
+	}
 }
 
 void socket_close()
