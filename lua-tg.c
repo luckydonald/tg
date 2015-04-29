@@ -105,7 +105,7 @@ int answer_started();
 int answer_start();
 void answer_end();
 void socket_connect();
-void socket_send();
+int socket_send();
 void socket_close();
 
 void lua_init(const char *address_string);
@@ -212,6 +212,8 @@ void postpone_execute_next() {
 
 void push_freshness();
 
+void answer_send();
+
 void lua_new_msg (struct tgl_message *M)
 {
 	if (!have_address) { return print_no_address(); }
@@ -226,10 +228,7 @@ void lua_new_msg (struct tgl_message *M)
 		push_message (M);
 	}
 	push("}");
-	socket_connect();
-	socket_send();
-	socket_close();
-	answer_end();
+	answer_send();
 }
 
 void push_freshness()
@@ -300,9 +299,7 @@ void lua_file_callbackback(union function_args *arg) {
 	}
 	free(file_name);
 	free(msg_id);
-	socket_connect();
-	socket_send();
-	socket_close();
+	answer_send();
 	answer_end();
 }
 
@@ -362,6 +359,19 @@ void socket_connect() {
 		}
 	}
 }
+
+void answer_send()
+{
+	//rk_sema_wait(rk_se);
+	int did_send = 0;
+	do {
+		socket_connect();
+		did_send = socket_send();
+		socket_close();
+	} while (did_send != 1);
+	answer_end();
+}
+
 int answer_started() {
 	return socked_in_use;
 }
@@ -379,12 +389,24 @@ int answer_start() {
 }
 void answer_end() {
 	rk_sema_wait(edit_socket_status);
+	answer_pos = -1;
 	assert(socked_in_use == 1);
 	socked_in_use = 0;
 	rk_sema_post(edit_socket_status);
 }
-void socket_send()
+
+int recv_all(int sockfd, void *buf, size_t len, int flags)
+;
+
+
+int socket_send()
 {
+	/**
+	 * returns 1, if successfully send (or there was nothing to send.) and the client responded with 'ACK'
+	 * returns 0, if the client responded 'ERR'
+	 * returns -1, if the client response timed out (10 seconds).
+	 **/
+	int success = 0;
 	if (answer_pos > 0) {
 		printf("Message length: %i\n", answer_pos);
 		printf("Sending response: " COLOR_GREY "%.*s" COLOR_NORMAL "\n", answer_pos, socket_answer);
@@ -415,11 +437,30 @@ void socket_send()
 		{
 			puts("Did send.");
 		} else {
-			printf("Didn't send, start (%i) != answer_pos (%i)", start, answer_pos);
+			printf("Didn't send, start (%i) != answer_pos (%i)\n", start, answer_pos);
 		}
 		memset(socket_answer, 0, answer_pos); //reset da data.
-		answer_pos = -1;
+		char response[4] = "   ";
+		memset(response, 0, 4);
+		struct timeval tv;
+		tv.tv_sec = 10;  /* 10 Secs Timeout */
+		tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+		setsockopt(socked_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
+		int read = recv_all(socked_fd, response, 3, 0); //TODO: Error checks
+		if (strncmp(response,"ACK",3) == 0) { //strncmp == 0 means zero difference.
+			puts(COLOR_GREEN "Client acknowledged." COLOR_NORMAL);
+			success = 1;
+		} else if (strncmp(response,"ERR",3) == 0){
+			puts(COLOR_REDB "Client failed." COLOR_NORMAL);
+			success = 0;
+		} else {
+			puts(COLOR_REDB "Client has not acknowledged." COLOR_NORMAL);
+			success = -1;
+		}
+		//printf(COLOR_YELLOW "read: %i\n" COLOR_NORMAL, read);
+		return success;
 	}
+	return 1;
 }
 
 void socket_close()
@@ -433,6 +474,24 @@ void socket_close()
 	{
 		printf("Socket was closed.\n");
 	}
+}
+
+int recv_all(int sockfd, void *buf, size_t len, int flags)
+{
+	size_t to_read = len;
+	char  *bufptr = (char*) buf;
+
+	while (to_read > 0)
+	{
+		ssize_t rsz = recv(sockfd, bufptr, to_read, flags);
+		if (rsz <= 0)
+			return rsz;  /* Error or other end closed connection */
+
+		to_read -= rsz;  /* Read less next time */
+		bufptr += rsz;  /* Next buffer position to read into */
+	}
+
+	return len;
 }
 
 void push (const char *format, ...) {
