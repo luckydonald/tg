@@ -301,7 +301,6 @@ void lua_file_callbackback(union function_args *arg) {
 	free(file_name);
 	free(msg_id);
 	answer_send();
-	answer_end();
 }
 
 
