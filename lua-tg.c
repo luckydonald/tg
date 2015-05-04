@@ -479,9 +479,10 @@ int get_acknowledge(const char *string)
 	char response[4] = "   "; //3 Characters + 1 Null-termiantor
 	memset(response, 0, 4);
 	setsockopt(socked_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
+	errno = 0; // reset it, to be sure.
 	int read = recv_all(socked_fd, response, 3, 0);
 	if (read < 0) {
-		int err_no = errno;
+		int err_no = errno; //cache it, in case something else uses this.
 		if (err_no == EAGAIN) {
 			printf(COLOR_REDB "Client has not acknowledged %s before the timeout.\n" COLOR_NORMAL, string);
 			return -1;
@@ -591,8 +592,9 @@ void push_user (tgl_peer_t *P) {
 }
 void push_chat (tgl_peer_t *P) {
 	assert (P->chat.title);
-	push("\"title\":\"%s\", \"members_num\":%i",
-			P->chat.title, P->chat.users_num);
+	char *escaped_caption = expand_escapes_alloc(P->chat.title);
+	push("\"title\":\"%s\", \"members_num\":%i", escaped_caption, P->chat.users_num);
+	free(escaped_caption);
 	if (P->chat.user_list) {
 		push(", \"members\": [");
 		int i;
