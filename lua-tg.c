@@ -587,8 +587,19 @@ void push_action(struct tgl_message_action *action);
 void push_typing(enum tgl_typing_status status);
 
 void push_user (tgl_peer_t *P) {
-	push("\"first_name\":\"%s\", \"last_name\":\"%s\", \"real_first_name\": \"%s\", \"real_last_name\": \"%s\", \"phone\":\"%s\"",
-			P->user.first_name, P->user.last_name, format_string_or_null(P->user.real_first_name), format_string_or_null(P->user.real_last_name),  format_string_or_null(P->user.phone));
+	char *escaped_caption = expand_escapes_alloc(P->user.first_name);
+	push("\"first_name\":\"%s\", ", escaped_caption);
+	free(escaped_caption);
+	escaped_caption = expand_escapes_alloc(P->user.last_name);
+	push("\"last_name\":\"%s\", ", escaped_caption);
+	free(escaped_caption);
+	escaped_caption = expand_escapes_alloc(format_string_or_null(P->user.real_first_name));
+	push("\"real_first_name\": \"%s\", ", escaped_caption);
+	free(escaped_caption);
+	escaped_caption = expand_escapes_alloc(format_string_or_null(P->user.real_last_name));
+	push("\"real_last_name\": \"%s\", ",escaped_caption);
+	free(escaped_caption);
+	push("\"phone\":\"%s\"", format_string_or_null(P->user.phone));
 }
 void push_chat (tgl_peer_t *P) {
 	assert (P->chat.title);
