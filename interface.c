@@ -765,7 +765,7 @@ void do_reply (struct command *command, int arg_num, struct arg args[], struct i
   tgl_do_send_message_reply (TLS, args[0].num, args[1].str, strlen (args[1].str), print_msg_success_gw, ev);
 }
 
-void do_send_typing (int arg_num, struct arg args[], struct in_ev *ev) {
+void do_send_typing (struct command *command, int arg_num, struct arg args[], struct in_ev *ev) {
   assert (arg_num == 2);
   if (ev) { ev->refcnt ++; }
   int status;
