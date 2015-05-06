@@ -716,6 +716,10 @@ void lua_add_int_field(char *key, int integer)
 {
 	push("\"%s\":\"%d\"", key, integer);
 }
+void lua_add_bool_field(char *key, int boolean)
+{
+	push("\"%s\":\"%s\"", key, format_bool(boolean));
+}
 
 void push_media(struct tgl_message_media *M, long long int *msg_id)
 {
@@ -724,9 +728,9 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 	switch (M->type) {
 		case tgl_message_media_photo:
 			push("\"type\": \"photo\", \"encrypted\": false");
-			if (M->photo->caption && strlen (M->caption))
+			if (M->caption && strlen (M->caption))
 			{
-				char *escaped_caption = expand_escapes_alloc(M->photo->caption);
+				char *escaped_caption = expand_escapes_alloc(M->caption);
 				push (", \"caption\":\"%s\"", escaped_caption); //file name afterwards.
 				free(escaped_caption);
 			}
@@ -751,7 +755,7 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 			msg_id_copy = malloc(sizeof(*msg_id));
 			memcpy(msg_id_copy, msg_id, sizeof(*msg_id));
 			tgl_do_load_document (TLS, M->document, lua_file_callback, msg_id_copy); // will download & insert file name.
-			if (M->document->caption && strlen (M->document->caption)) {
+			if (M->caption && strlen (M->document->caption)) {
 				char *escaped_caption = expand_escapes_alloc(M->document->caption);
 				push(", \"caption\":\"%s\"", escaped_caption);
 				free(escaped_caption);
@@ -856,6 +860,13 @@ void push_message (struct tgl_message *M) {
 	} else {
 		push("null");
 	}
+	if (M->reply_id) {
+		push(",");
+		lua_add_int_field ("reply_id", M->reply_id);
+	}
+
+	push(",");
+	lua_add_bool_field ("mention", (M->flags & TGLMF_MENTION));
 	push(", \"sender\":");
 	push_peer (M->from_id);
 	push(", \"receiver\":");

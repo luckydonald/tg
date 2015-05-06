@@ -35,7 +35,9 @@ JSON Reference:
 	        "startup" (diff, what is not processed, but happened before the startup of this session)
 	        "new"     (That message was received since the CLI is running.)
         - flags: [int] yeah, no idea.
-        - forward: [peer] from who the message originally is, or [null] if not forwarded.
+        - forward: [peer/null] from who the message originally is, or [null] if not forwarded.
+        * reply_id: [int] (id of the original message?)
+        - mention: [bool] (?)
         - sender: [peer] who send it.
         - receiver: [peer] who can read it now. (should be either a group or the bot)
         - peer: [peer] or [null] where you want to reply to, either the group chat if it was in a group chat, else the user's chat (will be equal to either 'sender' or 'receiver'). should be [null] if the bot sent this message.
@@ -126,8 +128,8 @@ JSON Reference:
             - last_name: [string]
             - user_id: [int] telegram user id, or 0 if not a telegram user.
         "geo"
-            - longitude: [int] (6 digits after the decimal)
-            - latitude": [int] (same formalt as longitude)
+            - longitude: [long] (6 digits after the decimal)
+            - latitude": [long] (same format as longitude)
             - google: [string] Link to google maps, format "https://maps.google.com/?q=12.123456,12.123456"
         "unsupported": well...
         "???": It is not even unsupported. Dealing with serious shit!
