@@ -46,8 +46,8 @@ JSON Reference:
         - date: [int]
         - service: [bool] If it is a normal message (false) or stuff like username changes etc..
             false:
-                * text: [string] | either text or media
-                * media: [media] | either text or media
+                * text: [string] | either text or media, or both, like if the
+                * media: [media] |  text contains a url, creating a webpage media.
             true:
                 - type: [int]
                   "none"
@@ -107,7 +107,7 @@ JSON Reference:
     - type:
         "photo"
             - encrypted: [bool]
-            * caption: original file name | if present on non encrypted photo
+            - caption: [string] user added text, can be empty.
         "document"
             - encrypted: [bool]
             - document: [string] Type of the document
@@ -116,14 +116,14 @@ JSON Reference:
                 "video"
                 "sticker"
                 "document" (everything else)
-            * caption: original file name as [string]   | if value present
+            * file_name: original file name as [string] | if value present (always?)
             * mime: [string] MIME-type, eg. "image/png" | if value present
-            * dimension: [size] pixel width and height  | if value present
-            * duration: [int] in seconds                | if value present
-            - size: human readable [string] e.g. "1MiB
+            * dimension: [size] pixel width and height  | if value present, probably if images/video
+            * duration: [int] in seconds                | if value present, probably if audio/video
+            - size: human readable [string] e.g. "1MiB"
             - bytes: [int] of the bytes e.g. 1243380
         "contact"
-            - phone: [string] often starting with "+" sign! (the formatting depends on the sending client, the allowed characters are digits, the plus sign, "*","#" (so you can actually send "+++++" as number))
+            - phone: [string] often starting with "+" sign! (the formatting depends on the sending client, the allowed characters are digits, the plus sign, "*","#" (so you can actually get "+++++" as number))
             - first_name: [string]
             - last_name: [string]
             - user_id: [int] telegram user id, or 0 if not a telegram user.
@@ -131,8 +131,17 @@ JSON Reference:
             - longitude: [long] (6 digits after the decimal)
             - latitude": [long] (same format as longitude)
             - google: [string] Link to google maps, format "https://maps.google.com/?q=12.123456,12.123456"
+        "venue": (is just a fancy geo)
+            - longitude: [long] see "geo"
+            - latitude": [long] see "geo"
+            - google: [string]  see "geo"
+            - title: [string]
+            - address: [string]
+            - provider: [string] like "foursquare"
+            - venue_id: [string] seems to be some hash thingie.
         "unsupported": well...
         "???": It is not even unsupported. Dealing with serious shit!
+            - type_id: [int] Please file a bug report including this number.
 
 [fwd]
     - sender: [peer] who it is from

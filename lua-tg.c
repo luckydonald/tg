@@ -645,7 +645,6 @@ void push_peer (tgl_peer_id_t id) {
 	if (P && (P->flags & TGLPF_CREATED))
 	{
 		push("\"%s\", ", tgl_peer_get(TLS, id)->print_name); //print_name
-
 		switch (tgl_get_peer_type(id))
 		{
 			case TGL_PEER_USER:
@@ -685,6 +684,8 @@ void push_peer_cmd(tgl_peer_id_t id) {
 
 void push_geo(struct tgl_geo geo) {
 	push("\"longitude\": %f, \"latitude\": %f", geo.longitude, geo.latitude);
+	push(",\"google\": \"https://maps.google.com/?q=%.6lf,%.6lf\"", geo.latitude, geo.longitude);
+
 }
 void push_size(int size){
 	push("\"size\":\"");
@@ -703,9 +704,15 @@ void push_size(int size){
 
 void lua_add_string_field(char *key, char *string)
 {
-	char *escaped_caption = expand_escapes_alloc(string);
-	push("\"%s\":\"%s\"", key, escaped_caption);
-	free(escaped_caption);
+	if (string == NULL) {
+		push("\"%s\":null", key);
+	}
+	else
+	{
+		char *escaped_caption = expand_escapes_alloc(format_string_or_null(string));
+		push("\"%s\":\"%s\"", key, escaped_caption);
+		free(escaped_caption);
+	}
 }
 
 void lua_add_double_field(char *key, double long_integer)
@@ -720,6 +727,10 @@ void lua_add_bool_field(char *key, int boolean)
 {
 	push("\"%s\":\"%s\"", key, format_bool(boolean));
 }
+void lua_add_null_field(char *key)
+{
+	push("\"%s\":null", key);
+}
 
 void push_media(struct tgl_message_media *M, long long int *msg_id)
 {
@@ -727,13 +738,8 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 	long long int *msg_id_copy;
 	switch (M->type) {
 		case tgl_message_media_photo:
-			push("\"type\": \"photo\", \"encrypted\": false");
-			if (M->caption && strlen (M->caption))
-			{
-				char *escaped_caption = expand_escapes_alloc(M->caption);
-				push (", \"caption\":\"%s\"", escaped_caption); //file name afterwards.
-				free(escaped_caption);
-			}
+			push("\"type\":\"photo\",\"encrypted\": false,");
+			lua_add_string_field("caption",M->caption);
 			msg_id_copy = malloc(sizeof(*msg_id));
 			memcpy(msg_id_copy, msg_id, sizeof(*msg_id));
 			tgl_do_load_photo (TLS, M->photo, lua_file_callback, msg_id_copy);
@@ -755,12 +761,10 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 			msg_id_copy = malloc(sizeof(*msg_id));
 			memcpy(msg_id_copy, msg_id, sizeof(*msg_id));
 			tgl_do_load_document (TLS, M->document, lua_file_callback, msg_id_copy); // will download & insert file name.
-			if (M->caption && strlen (M->document->caption)) {
-				char *escaped_caption = expand_escapes_alloc(M->document->caption);
-				push(", \"caption\":\"%s\"", escaped_caption);
-				free(escaped_caption);
+			if (M->document->caption && strlen (M->document->caption)) {
+				push(",");
+				lua_add_string_field("file_name", M->document->caption);
 			}
-
 			if (M->document->mime_type) {
 				push(", \"mime\":\"%s\"", M->document->mime_type);
 			}
@@ -793,10 +797,9 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 			memcpy(msg_id_copy, msg_id, sizeof(*msg_id));
 			tgl_do_load_encr_document (TLS, M->encr_document, lua_file_callback, msg_id_copy); // will download & insert file name.
 			//TODO: wait until the callback pushed the filename.
-			if (M->encr_document->caption && strlen (M->document->caption)) {
-				char *escaped_caption = expand_escapes_alloc(M->document->caption);
-				push(", \"caption\":\"%s\"", escaped_caption);
-				free(escaped_caption);
+			if (M->encr_document->caption && strlen (M->encr_document->caption)) {
+				push(",");
+				lua_add_string_field("file_name", M->encr_document->caption);
 			}
 
 			if (M->encr_document->mime_type) {
@@ -819,10 +822,12 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 		case tgl_message_media_geo:
 			push("\"type\": \"geo\", ");
 			push_geo(M->geo);
-			push(", \"google\":\"https://maps.google.com/?q=%.6lf,%.6lf\"", M->geo.latitude, M->geo.longitude);
 			break;
 		case tgl_message_media_contact:
-			push("\"type\": \"contact\", \"phone\": \"%s\", \"first_name\": \"%s\", \"last_name\": \"%s\", \"user_id\": %i",  M->phone, M->first_name, M->last_name, M->user_id);
+			push("\"type\": \"contact\", \"phone\": \"%s\",",M->phone);
+			lua_add_string_field("first_name",  M->first_name); push(",");
+			lua_add_string_field("last_name",  M->last_name); push(",");
+			lua_add_int_field("user_id",  M->user_id);
 			break;
 		case tgl_message_media_webpage:
 			lua_add_string_field ("type", "webpage"); push(",");
@@ -833,8 +838,7 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 			break;
 		case tgl_message_media_venue:
 			lua_add_string_field ("type", "venue"); push(",");
-			lua_add_double_field("longitude", M->venue.geo.longitude); push(",");
-			lua_add_double_field("latitude", M->venue.geo.latitude); push(",");
+			push_geo(M->venue.geo); push(",");
 			lua_add_string_field ("title", M->venue.title); push(",");
 			lua_add_string_field ("address", M->venue.address); push(",");
 			lua_add_string_field ("provider", M->venue.provider); push(",");
@@ -842,7 +846,7 @@ void push_media(struct tgl_message_media *M, long long int *msg_id)
 			break;
 
 		default:
-			push("\"type\": \"\?\?\?\", \"typeid\":\"%d\"", M->type); //escaped "???" to avoid Trigraph. (see http://stackoverflow.com/a/1234618 )
+			push("\"type\": \"\?\?\?\", \"type_id\":\"%d\"", M->type); //escaped "???" to avoid Trigraph. (see http://stackoverflow.com/a/1234618 )
 			break;
 	}
 	push("}");
@@ -886,17 +890,20 @@ void push_message (struct tgl_message *M) {
 	}
 	push(", \"own\": %s, \"unread\":%s, \"date\":%i, \"service\":%s", format_bool((M->flags & TGLMF_OUT) != 0), format_bool((M->flags & TGLMF_UNREAD) != 0), M->date, format_bool((M->flags & TGLMF_SERVICE) != 0) );
 	if (!(M->flags & TGLMF_SERVICE) != 0) {
+		push(",");
 		if (M->message_len > 0 && M->message) {
-			char *escaped_message = expand_escapes_alloc(M->message);
-			push(", \"text\": \"%s\", \"media\": null", escaped_message); // http://stackoverflow.com/a/3767300
-			free(escaped_message);
+			lua_add_string_field("text", M->message); // http://stackoverflow.com/a/3767300
+		} else {
+			lua_add_null_field("text");
 		}
 		if (M->media.type && M->media.type != tgl_message_media_none) {
-			push(", \"text\": null, \"media\":");
+			push(",\"media\":");
 			push_media(&M->media, &M->id);
+		} else {
+			push(",\"media\":null");
 		}
 	} else {
-		push(", \"action\": ");
+		push(",\"action\": ");
 		push_action(&(M->action));
 	}
 	// is no dict => no "}".
