@@ -139,6 +139,11 @@ JSON Reference:
             - address: [string]
             - provider: [string] like "foursquare"
             - venue_id: [string] seems to be some hash thingie.
+        "webpage"
+            - url: [string] the detected URL
+            - title: [string] Page title
+            - description: [string]
+            - author: [string] often not given.
         "unsupported": well...
         "???": It is not even unsupported. Dealing with serious shit!
             - type_id: [int] Please file a bug report including this number.
