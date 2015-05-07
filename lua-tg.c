@@ -319,7 +319,8 @@ void socket_init (char *address_string)
 	uint16_t port = DEFAULT_PORT;
 	strtok(address_string, ":");
 	port_pos = strtok(NULL, ":"); //why is it needed doubled?
-	if (!is_valid_ip(address_string)) {
+	int valid = is_valid_ip(address_string);
+	if (!valid) {
 		printf(COLOR_REDB "Invalid IP address given.\n" COLOR_NORMAL);
 		exit(3);
 	}
@@ -1126,43 +1127,65 @@ int valid_digit(char *ip_str)
 	return 1;
 }
 
+#define IP_DELIM "."
+
 //www.geeksforgeeks.org/program-to-validate-an-ip-address/
 /* return 1 if IP string is valid, else return 0 */
 int is_valid_ip(char *ip_str)
 {
-	int i, num, dots = 0;
+	if (ip_str == NULL) {
+		return 0;
+	}
+	int num, dots = 0;
 	char *ptr;
 
-	if (ip_str == NULL)
-		return 0;
+	char *ip_str_copy = malloc(sizeof(char) * strnlen(ip_str, 16)); //copy because we modify the string. 123.567.901.345\0 = 15 + \0 = 16
+	strncpy(ip_str_copy, ip_str, 16);
+	ptr = ip_str_copy + 16;
+	*ptr = '\0'; //force null-termination.
 
+
+	if (ip_str_copy == NULL) {
+		free(ip_str_copy);
+		return 0;
+	}
 	// See following link for strtok()
 	// http://pubs.opengroup.org/onlinepubs/009695399/functions/strtok_r.html
-	ptr = strtok(ip_str, DELIM);
+	ptr = strtok(ip_str_copy, IP_DELIM);
 
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		free(ip_str_copy);
 		return 0;
+	}
 
-	while (ptr) {
+	while (ptr)
+	{
 
 		/* after parsing string, it must contain only digits */
-		if (!valid_digit(ptr))
+		if (!valid_digit(ptr)) {
+			free(ip_str_copy);
 			return 0;
+		}
 
 		num = atoi(ptr);
 
 		/* check for valid IP */
 		if (num >= 0 && num <= 255) {
 			/* parse remaining string */
-			ptr = strtok(NULL, DELIM);
-			if (ptr != NULL)
+			ptr = strtok(NULL, IP_DELIM);
+			if (ptr != NULL) {
 				++dots;
-		} else
+			}
+		} else {
+			free(ip_str_copy);
 			return 0;
+		}
 	}
-
 	/* valid IP string must contain 3 dots */
-	if (dots != 3)
+	if (dots != 3) {
+		free(ip_str_copy);
 		return 0;
+	}
+	free(ip_str_copy);
 	return 1;
 }
